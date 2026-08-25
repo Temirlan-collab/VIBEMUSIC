@@ -1,2 +1,0 @@
-# VIBEMUSIC
-vibemusic
