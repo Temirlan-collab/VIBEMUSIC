@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎵 Музыкальный плеер</title>
+    <style>
+        /* ----- ОБЩИЕ СТИЛИ ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #121212;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .player-container {
+            max-width: 480px;
+            width: 100%;
+            background: #1e1e1e;
+            border-radius: 28px;
+            padding: 30px 24px 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            transition: 0.3s;
+        }
+
+        /* =========================================================
+               АНИМИРОВАННЫЙ ЛОГОТИП
+            ========================================================= */
+        .logo-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 20px;
+            user-select: none;
+        }
+
+        /* Пульсирующий круг с нотой */
+        .logo-icon {
+            position: relative;
+            width: 56px;
+            height: 56px;
+            flex-shrink: 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .logo-icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Дополнительные пульсирующие кольца вокруг лого */
+        .logo-icon::before,
+        .logo-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid rgba(29, 185, 84, 0.3);
+            transform: translate(-50%, -50%) scale(1);
+            animation: ring-pulse 2s ease-out infinite;
+            pointer-events: none;
+        }
+
+        .logo-icon::after {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes ring-pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.9);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1.6);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.08);
+            }
+        }
+
+        /* Текст логотипа с градиентом и анимацией свечения */
+        .logo-text {
+            font-size: 30px;
+            font-weight: 900;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #ffffff 0%, #1db954 70%, #1ed760 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glow 3s ease-in-out infinite alternate;
+            text-shadow: none;
+        }
+
+        @keyframes glow {
+            0% {
+                filter: drop-shadow(0 0 4px rgba(29, 185, 84, 0.3));
+            }
+            100% {
+                filter: drop-shadow(0 0 20px rgba(29, 185, 84, 0.6));
+            }
+        }
+
+        .logo-text span {
+            font-weight: 300;
+            background: linear-gradient(135deg, #b3b3b3, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* =========================================================
+               ОСТАЛЬНЫЕ СТИЛИ (плеер)
+            ========================================================= */
+
+        .cover {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 20px;
+            background: linear-gradient(145deg, #2a2a2a, #111);
+            overflow: hidden;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .track-info {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .track-info h2 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-info p {
+            font-size: 15px;
+            color: #b3b3b3;
+            font-weight: 400;
+        }
+
+        .progress-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #b3b3b3;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 5px;
+            background: #3a3a3a;
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.2s;
+        }
+
+        .progress-bar:hover {
+            height: 7px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #1db954;
+            border-radius: 10px;
+            pointer-events: none;
+            transition: width 0.1s linear;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 28px;
+            margin: 10px 0 20px;
+        }
+
+        .controls button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 32px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .controls button:hover {
+            transform: scale(1.08);
+            background: #333;
+        }
+
+        .controls .play-btn {
+            font-size: 40px;
+            background: #1db954;
+            color: #000;
+            width: 64px;
+            height: 64px;
+        }
+
+        .controls .play-btn:hover {
+            background: #1ed760;
+            transform: scale(1.05);
+        }
+
+        .volume-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 6px;
+            padding: 0 6px;
+        }
+
+        .volume-area span {
+            font-size: 20px;
+        }
+
+        .volume-bar {
+            flex: 1;
+            height: 4px;
+            background: #3a3a3a;
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .volume-fill {
+            height: 100%;
+            width: 80%;
+            background: #1db954;
+            border-radius: 10px;
+            pointer-events: none;
+        }
+
+        .playlist {
+            margin-top: 28px;
+            border-top: 1px solid #2a2a2a;
+            padding-top: 18px;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .playlist::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .playlist::-webkit-scrollbar-thumb {
+            background: #1db954;
+            border-radius: 10px;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .playlist-item:hover {
+            background: #2a2a2a;
+        }
+
+        .playlist-item.active {
+            background: #2a2a2a;
+            border-left: 4px solid #1db954;
+        }
+
+        .playlist-item .pl-index {
+            color: #777;
+            font-size: 14px;
+            font-weight: 600;
+            width: 24px;
+        }
+
+        .playlist-item .pl-info {
+            flex: 1;
+        }
+
+        .playlist-item .pl-info .pl-title {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .playlist-item .pl-info .pl-artist {
+            font-size: 13px;
+            color: #b3b3b3;
+        }
+
+        .playlist-item .pl-duration {
+            color: #777;
+            font-size: 13px;
+        }
+
+        @media (max-width: 500px) {
+            .player-container {
+                padding: 20px 16px;
+            }
+            .controls {
+                gap: 18px;
+            }
+            .controls button {
+                width: 44px;
+                height: 44px;
+                font-size: 26px;
+            }
+            .controls .play-btn {
+                width: 56px;
+                height: 56px;
+                font-size: 34px;
+            }
+            .logo-text {
+                font-size: 22px;
+            }
+            .logo-icon {
+                width: 44px;
+                height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="player-container">
+
+        <!-- =========================================================
+        АНИМИРОВАННЫЙ ЛОГОТИП СВЕРХУ
+        ========================================================= -->
+        <div class="logo-wrapper">
+            <!-- Иконка с пульсацией -->
+            <div class="logo-icon">
+                <svg viewBox="0 0 60 60">
+                    <circle cx="30" cy="30" r="28" fill="#1db954" />
+                    <text x="30" y="43" font-size="38" text-anchor="middle" fill="white" font-family="Arial">♫</text>
+                </svg>
+            </div>
+
+            <!-- Текст с градиентом и свечением -->
+            <div class="logo-text">
+                VIBE<span>MUSIC</span>
+            </div>
+        </div>
+
+        <!-- =========================================================
+        ОБЛОЖКА
+        ========================================================= -->
+        <div class="cover">
+            <img id="coverImage" src="https://picsum.photos/seed/cover1/600/600" alt="Обложка" />
+        </div>
+
+        <!-- ИНФОРМАЦИЯ О ТРЕКЕ -->
+        <div class="track-info">
+            <h2 id="trackTitle">Название трека</h2>
+            <p id="trackArtist">Исполнитель</p>
+        </div>
+
+        <!-- ПРОГРЕСС -->
+        <div class="progress-area">
+            <span id="currentTime">0:00</span>
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span id="totalTime">0:00</span>
+        </div>
+
+        <!-- КНОПКИ -->
+        <div class="controls">
+            <button id="prevBtn" title="Предыдущий">⏮</button>
+            <button class="play-btn" id="playBtn" title="Play / Pause">▶</button>
+            <button id="nextBtn" title="Следующий">⏭</button>
+        </div>
+
+        <!-- ГРОМКОСТЬ -->
+        <div class="volume-area">
+            <span>🔊</span>
+            <div class="volume-bar" id="volumeBar">
+                <div class="volume-fill" id="volumeFill"></div>
+            </div>
+        </div>
+
+        <!-- ПЛЕЙЛИСТ -->
+        <div class="playlist" id="playlistContainer"></div>
+
+    </div>
+
+    <script>
+        // --------------------------------------------------------------
+        //  📀  СПИСОК ТРЕКОВ
+        // --------------------------------------------------------------
+        const tracks = [{
+            title: 'Sagynysh',
+            artist: 'Bakr & Sadraddin',
+            src: 'Sadraddin Bakr - Sagynysh (kzmp3.kz).mp3',
+            cover: 'bakr.jpg'
+        }, {
+            title: 'Qumar',
+            artist: 'Bayansulu',
+            src: 'BAYANSULU - Құмар (kzmp3.kz).mp3',
+            cover: 'qumar.jpg'
+        }, {
+            title: 'TATA',
+            artist: 'Gayo faet. Mikey',
+            src: 'Gayo feat. Mikey - Тата.mp3',
+            cover: 'tata.jfif'
+        }, {
+            title: 'AFRO',
+            artist: 'Sadraddin',
+            src: 'Sadraddin - Afro (kzmp3.kz).mp3',
+            cover: 'afro.jpg'
+        }, {
+            title: 'Я плачу',
+            artist: 'A.V.G',
+            src: 'A.V.G - Я Плачу.mp3',
+            cover: 'A.V.G.jfif'
+        }, {
+            title: 'Уляля',
+            artist: 'Гербер',
+            src: 'Гербер - Уляля.mp3',
+            cover: 'ulya.jfif'
+        }];
+
+        // --------------------------------------------------------------
+        //  DOM-ЭЛЕМЕНТЫ
+        // --------------------------------------------------------------
+        const audio = new Audio();
+        const playBtn = document.getElementById('playBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const currentTimeEl = document.getElementById('currentTime');
+        const totalTimeEl = document.getElementById('totalTime');
+        const volumeBar = document.getElementById('volumeBar');
+        const volumeFill = document.getElementById('volumeFill');
+        const coverImg = document.getElementById('coverImage');
+        const titleEl = document.getElementById('trackTitle');
+        const artistEl = document.getElementById('trackArtist');
+        const playlistEl = document.getElementById('playlistContainer');
+
+        let currentIndex = 0;
+        let isPlaying = false;
+        let isDraggingProgress = false;
+        let isDraggingVolume = false;
+
+        // --------------------------------------------------------------
+        //  ЗАГРУЗКА ТРЕКА
+        // --------------------------------------------------------------
+        function loadTrack(index) {
+            const track = tracks[index];
+            audio.src = track.src;
+            titleEl.textContent = track.title;
+            artistEl.textContent = track.artist;
+            coverImg.src = track.cover;
+            audio.load();
+            updatePlaylistActive(index);
+            progressFill.style.width = '0%';
+            currentTimeEl.textContent = '0:00';
+            audio.addEventListener('loadedmetadata', () => {
+                totalTimeEl.textContent = formatTime(audio.duration);
+            }, { once: true });
+        }
+
+        // --------------------------------------------------------------
+        //  PLAY / PAUSE
+        // --------------------------------------------------------------
+        function togglePlay() {
+            if (isPlaying) {
+                audio.pause();
+                playBtn.textContent = '▶';
+            } else {
+                audio.play().catch(() => {});
+                playBtn.textContent = '⏸';
+            }
+            isPlaying = !isPlaying;
+        }
+
+        // --------------------------------------------------------------
+        //  ПЕРЕКЛЮЧЕНИЕ
+        // --------------------------------------------------------------
+        function nextTrack() {
+            currentIndex = (currentIndex + 1) % tracks.length;
+            loadTrack(currentIndex);
+            if (isPlaying) {
+                audio.play().catch(() => {});
+                playBtn.textContent = '⏸';
+            } else {
+                playBtn.textContent = '▶';
+            }
+        }
+
+        function prevTrack() {
+            currentIndex = (currentIndex - 1 + tracks.length) % tracks.length;
+            loadTrack(currentIndex);
+            if (isPlaying) {
+                audio.play().catch(() => {});
+                playBtn.textContent = '⏸';
+            } else {
+                playBtn.textContent = '▶';
+            }
+        }
+
+        // --------------------------------------------------------------
+        //  ФОРМАТИРОВАНИЕ
+        // --------------------------------------------------------------
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // --------------------------------------------------------------
+        //  ПРОГРЕСС
+        // --------------------------------------------------------------
+        audio.addEventListener('timeupdate', () => {
+            if (!isDraggingProgress && audio.duration) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = percent + '%';
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+            }
+        });
+
+        progressBar.addEventListener('mousedown', (e) => {
+            isDraggingProgress = true;
+            setProgress(e);
+            document.addEventListener('mousemove', setProgress);
+            document.addEventListener('mouseup', () => {
+                isDraggingProgress = false;
+                document.removeEventListener('mousemove', setProgress);
+            }, { once: true });
+        });
+
+        function setProgress(e) {
+            const rect = progressBar.getBoundingClientRect();
+            let x = (e.clientX - rect.left) / rect.width;
+            x = Math.min(Math.max(x, 0), 1);
+            if (audio.duration) {
+                audio.currentTime = x * audio.duration;
+                progressFill.style.width = x * 100 + '%';
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+            }
+        }
+
+        // --------------------------------------------------------------
+        //  ГРОМКОСТЬ
+        // --------------------------------------------------------------
+        audio.volume = 0.8;
+        volumeFill.style.width = '80%';
+
+        volumeBar.addEventListener('mousedown', (e) => {
+            isDraggingVolume = true;
+            setVolume(e);
+            document.addEventListener('mousemove', setVolume);
+            document.addEventListener('mouseup', () => {
+                isDraggingVolume = false;
+                document.removeEventListener('mousemove', setVolume);
+            }, { once: true });
+        });
+
+        function setVolume(e) {
+            const rect = volumeBar.getBoundingClientRect();
+            let x = (e.clientX - rect.left) / rect.width;
+            x = Math.min(Math.max(x, 0), 1);
+            audio.volume = x;
+            volumeFill.style.width = x * 100 + '%';
+        }
+
+        // --------------------------------------------------------------
+        //  ПЛЕЙЛИСТ
+        // --------------------------------------------------------------
+        function renderPlaylist() {
+            playlistEl.innerHTML = '';
+            tracks.forEach((track, i) => {
+                const div = document.createElement('div');
+                div.className = 'playlist-item' + (i === currentIndex ? ' active' : '');
+                div.innerHTML = `
+                        <span class="pl-index">${i + 1}</span>
+                        <div class="pl-info">
+                            <div class="pl-title">${track.title}</div>
+                            <div class="pl-artist">${track.artist}</div>
+                        </div>
+                        <span class="pl-duration">3:30</span>
+                    `;
+                div.addEventListener('click', () => {
+                    currentIndex = i;
+                    loadTrack(currentIndex);
+                    if (isPlaying) {
+                        audio.play().catch(() => {});
+                        playBtn.textContent = '⏸';
+                    } else {
+                        playBtn.textContent = '▶';
+                    }
+                });
+                playlistEl.appendChild(div);
+            });
+        }
+
+        function updatePlaylistActive(index) {
+            const items = playlistEl.querySelectorAll('.playlist-item');
+            items.forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+        }
+
+        // --------------------------------------------------------------
+        //  СОБЫТИЯ
+        // --------------------------------------------------------------
+        playBtn.addEventListener('click', togglePlay);
+        nextBtn.addEventListener('click', nextTrack);
+        prevBtn.addEventListener('click', prevTrack);
+        audio.addEventListener('ended', nextTrack);
+
+        // --------------------------------------------------------------
+        //  СТАРТ
+        // --------------------------------------------------------------
+        renderPlaylist();
+        loadTrack(0);
+    </script>
+
+</body>
+</html>
